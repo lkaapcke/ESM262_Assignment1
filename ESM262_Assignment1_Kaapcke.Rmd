@@ -18,7 +18,6 @@ library(knitr)
 
 #Read in data
 gaz_raw <- as_tibble(read_delim("C:/Users/lnkaa/Documents/ESM Computing/CA_Features_20180401.txt", delim = "|", col_names = T, col_types = cols(.default = col_character())))
-#summary(gaz_raw)
 
 ```
 
@@ -28,7 +27,6 @@ gaz_raw <- as_tibble(read_delim("C:/Users/lnkaa/Documents/ESM Computing/CA_Featu
 
 gaz <- gaz_raw %>% 
   select(FEATURE_ID:STATE_ALPHA, COUNTY_NAME, ends_with("_DEC"), ELEV_IN_M, MAP_NAME:DATE_EDITED)
-#View(gaz)
 
 ```
 
@@ -50,8 +48,8 @@ gaz <- type_convert(gaz, col_types = cols(
   DATE_CREATED = col_date(format = "%m/%d/%Y"),
   DATE_EDITED = col_date(format = "%m/%d/%Y")
 ))
-#Is there a way to convert the other columns features without knowing the number of levels? col_factor()??
-#head(gaz) #Check conversion worked
+
+head(gaz) #Check that conversions worked
 
 ```
 
@@ -71,10 +69,8 @@ gaz <- gaz %>%
 ```{r write, message = F, warning = F}
 
 # Get working directory and write the file
-#getwd()
-#write_delim(gaz, "gaz.csv", delim = "|")
-
-#Why doesn't write_csv(gaz, "gaz.csv", delim = "|") work?
+getwd()
+write_delim(gaz, "gaz.csv", delim = "|")
 
 ```
 
@@ -84,7 +80,8 @@ gaz <- gaz %>%
 
 ```{r feature_name, message = F, warning = F}
 
-gaz$FEATURE_NAME <- as.factor(gaz$FEATURE_NAME) # Type convert to a factor
+# Type convert to a factor
+gaz$FEATURE_NAME <- as.factor(gaz$FEATURE_NAME)
 
 # Count and arrange names in descending order
 count_names <- gaz %>%
@@ -155,6 +152,7 @@ center <- mutate(bounds,
                  Center_Latitude = southlat + ((northlat-southlat) / 2),
                  Center_Longitude = eastlong + ((westlong-eastlong) / 2)) %>% 
   select(COUNTY_NAME, Center_Latitude, Center_Longitude)
+
 center
 
 ```
