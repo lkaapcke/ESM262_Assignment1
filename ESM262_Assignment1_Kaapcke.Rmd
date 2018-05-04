@@ -163,27 +163,35 @@ center
 
 ```{r feature_type, message = F, warning = F}
 
+# Isolate the unique feature classes
 classes <- gaz %>% 
   distinct(FEATURE_CLASS) %>% 
   arrange(FEATURE_CLASS)
-View(classes)
 
+# Create a new tibble that defines each class as natural or manmade
 types <- mutate(classes,
                 Class_Type = c("Manmade", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Manmade", "Manmade", "Manmade", "Natural", "Manmade", "Manmade", "Natural", "Manmade", "Manmade", "Natural", "Natural", "Manmade", "Manmade", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Manmade", "Manmade", "Natural", "Natural", "Natural", "Natural", "Natural", "Manmade", "Manmade", "Manmade", "Manmade", "Manmade", "Natural", "Natural", "Manmade", "Manmade", "Natural", "Natural", "Manmade", "Manmade", "Natural", "Manmade", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Manmade", "Manmade", "Manmade", "Natural", "Manmade", "Natural")
 )
-View(types)
-  
-  
 
+# Join to gaz, select desired columns
+class_types <- left_join(gaz, types, by = "FEATURE_CLASS") %>% 
+  select(FEATURE_NAME, COUNTY_NAME, FEATURE_CLASS, Class_Type)
+head(gaz)
 
+# Type convert county name to a factor
+class_types$COUNTY_NAME <- as.factor(class_types$COUNTY_NAME)
+
+# Find fractions of natural and manmade features for each county
+feature_fractions <- class_types %>%
+  group_by(COUNTY_NAME) %>% 
+  summarize(Manmade = sum(Class_Type == "Manmade"), Natural = sum(Class_Type == "Natural")) %>% 
+  mutate(
+    Fraction_Manmade = (Manmade / (Manmade + Natural)),
+    Fraction_Natural = 1 - Fraction_Manmade
+  ) %>% 
+  select(COUNTY_NAME, Fraction_Manmade, Fraction_Natural)
 
 ```
-
-center <- mutate(bounds,
-                 Center_Latitude = southlat + ((northlat-southlat) / 2),
-                 Center_Longitude = eastlong + ((westlong-eastlong) / 2)) %>% 
-  select(COUNTY_NAME, Center_Latitude, Center_Longitude)
-
 
 
 
