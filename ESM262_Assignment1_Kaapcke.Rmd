@@ -1,0 +1,219 @@
+---
+title: "ESM262_HW1_Kaapcke"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import and Tidy
+
+1. Load tidyverse and read gazetteer data into a tibble. 
+
+```{r tools_data, warning = F, message = F}
+
+library(tidyverse)
+library(knitr)
+
+#Read in data
+gaz_raw <- as_tibble(read_delim("C:/Users/lnkaa/Documents/ESM Computing/CA_Features_20180401.txt", delim = "|", col_names = T, col_types = cols(.default = col_character())))
+#summary(gaz_raw)
+
+```
+
+2. Select desired columns.
+
+```{r table, warning = F, message = F}
+
+gaz <- gaz_raw %>% 
+  select(FEATURE_ID:STATE_ALPHA, COUNTY_NAME, ends_with("_DEC"), ELEV_IN_M, MAP_NAME:DATE_EDITED)
+#View(gaz)
+
+```
+
+3. Convert the columns to the appropriate type. Convert unknown placeholders to NA. 
+
+```{r convert, warning = F, message = F}
+
+#Replace "Unknown" with "NA"
+is.na(gaz) <- gaz == "Unknown"
+
+#Convert columns
+gaz <- type_convert(gaz, col_types = cols( 
+  FEATURE_ID = col_double(),
+  PRIM_LAT_DEC = col_double(),
+  PRIM_LONG_DEC = col_double(),
+  SOURCE_LAT_DEC = col_double(),
+  SOURCE_LONG_DEC = col_double(),
+  ELEV_IN_M = col_double(),
+  DATE_CREATED = col_date(format = "%m/%d/%Y"),
+  DATE_EDITED = col_date(format = "%m/%d/%Y")
+))
+#Is there a way to convert the other columns features without knowing the number of levels? col_factor()??
+#head(gaz) #Check conversion worked
+
+```
+
+4. Delete rows with NA for primary longitude or latitude or where the feature is not California.
+
+```{r filter, message = F, warning = F}
+
+gaz <- gaz %>%
+  filter(STATE_ALPHA == "CA") %>% 
+  filter(PRIM_LAT_DEC != 0, PRIM_LONG_DEC != 0)
+
+```
+
+
+5. Write gaz to a .csv
+
+```{r write, message = F, warning = F}
+
+# Get working directory and write the file
+#getwd()
+#write_delim(gaz, "gaz.csv", delim = "|")
+
+#Why doesn't write_csv(gaz, "gaz.csv", delim = "|") work?
+
+```
+
+## Analyze the Data
+
+1. What is the most frequenty appearing feature name?
+
+```{r feature_name, message = F, warning = F}
+
+gaz$FEATURE_NAME <- as.factor(gaz$FEATURE_NAME) # Type convert to a factor
+
+# Count and arrange names in descending order
+count_names <- gaz %>%
+  group_by(FEATURE_NAME) %>% 
+  summarize(n_names = n()) %>% 
+  arrange(desc(n_names))
+
+count_names
+
+```
+
+The feature name that appears the most often is "Church of Christ".
+
+2. What is the least frequently occuring feature class?
+
+```{r feature_class, message = F, warning = F}
+
+# Type convert column to a factor
+gaz$FEATURE_CLASS <- as.factor(gaz$FEATURE_CLASS)
+
+# Count classes and arrange in ascending order
+count_class <- gaz %>%
+  group_by(FEATURE_CLASS) %>% 
+  summarize(n_classes = n()) %>% 
+  arrange(n_classes)
+
+count_class
+
+```
+
+The feature classes that appear the least are "Sea" and "Isthmus".
+
+3. What is the approximate center point of each county?
+
+```{r county_center, warning = F, message = F}
+
+# Find northernmost point
+north <- gaz %>%
+  group_by(COUNTY_NAME) %>% 
+  summarize(northlat = max(PRIM_LAT_DEC))
+
+# Find southernmost point
+south <- gaz %>%
+  group_by(COUNTY_NAME) %>% 
+  summarize(southlat = min(PRIM_LAT_DEC))
+
+# Join into a table
+lats <- left_join(north, south, by = "COUNTY_NAME")
+
+# Find westernmost point
+west <- gaz %>%
+  group_by(COUNTY_NAME) %>% 
+  summarize(westlong = min(PRIM_LONG_DEC))
+
+# Find easternmost point
+east <- gaz %>%
+  group_by(COUNTY_NAME) %>% 
+  summarize(eastlong = max(PRIM_LONG_DEC))
+
+# Join into a table
+longs <- left_join(west, east, by = "COUNTY_NAME")
+
+# Join into a table with all bounds
+bounds <- left_join(lats, longs, by = "COUNTY_NAME")
+
+# Create a new tibble with columns for the center latitude and longitude points.
+center <- mutate(bounds,
+                 Center_Latitude = southlat + ((northlat-southlat) / 2),
+                 Center_Longitude = eastlong + ((westlong-eastlong) / 2)) %>% 
+  select(COUNTY_NAME, Center_Latitude, Center_Longitude)
+center
+
+```
+
+4. What are the fractions of the total number of features in each county that are natural vs. man-made?
+
+```{r feature_type, message = F, warning = F}
+
+classes <- gaz %>% 
+  distinct(FEATURE_CLASS) %>% 
+  arrange(FEATURE_CLASS)
+View(classes)
+
+types <- mutate(classes,
+                Class_Type = c("Manmade", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Manmade", "Manmade", "Manmade", "Natural", "Manmade", "Manmade", "Natural", "Manmade", "Manmade", "Natural", "Natural", "Manmade", "Manmade", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Manmade", "Manmade", "Natural", "Natural", "Natural", "Natural", "Natural", "Manmade", "Manmade", "Manmade", "Manmade", "Manmade", "Natural", "Natural", "Manmade", "Manmade", "Natural", "Natural", "Manmade", "Manmade", "Natural", "Manmade", "Natural", "Natural", "Natural", "Natural", "Natural", "Natural", "Manmade", "Manmade", "Manmade", "Natural", "Manmade", "Natural")
+)
+View(types)
+  
+  
+
+
+
+```
+
+center <- mutate(bounds,
+                 Center_Latitude = southlat + ((northlat-southlat) / 2),
+                 Center_Longitude = eastlong + ((westlong-eastlong) / 2)) %>% 
+  select(COUNTY_NAME, Center_Latitude, Center_Longitude)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
